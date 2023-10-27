@@ -1,12 +1,17 @@
+import POJOClasses.Location;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.builder.ResponseSpecBuilder;
 import io.restassured.filter.log.LogDetail;
 import io.restassured.http.ContentType;
+import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 import io.restassured.specification.ResponseSpecification;
+import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+
+import java.util.List;
 
 import static io.restassured.RestAssured.*;
 import static org.hamcrest.Matchers.*;
@@ -250,26 +255,33 @@ public class ZippoAPITest {
         return parameters;
     }
 
+    RequestSpecification requestSpecification;
+    ResponseSpecification responseSpecification;
+
     @BeforeClass
     public void setUp() {
         baseURI = "https://gorest.co.in/public/v1";
         // if the request url in the request method doesn't have http part
         // rest assured puts baseURI to the beginning of the url in the request method
 
-        RequestSpecification requestSpecification = new RequestSpecBuilder()
+        requestSpecification = new RequestSpecBuilder()
                 .log(LogDetail.URI)
                 .log(LogDetail.BODY)
                 .addPathParam("APIName", "users")
-                .addParam("page",3)
+                .addParam("page", 3)
+                .setContentType(ContentType.JSON)
                 .build();
 
-        ResponseSpecification responseSpecification = new ResponseSpecBuilder()
-                .log(LogDetail.BODY) // Continue Tomorrow
+        responseSpecification = new ResponseSpecBuilder()
+                .log(LogDetail.BODY)
+                .expectStatusCode(200)
+                .expectContentType(ContentType.JSON)
+                .build();
 
     }
 
     @Test
-    void baeURITest(){
+    void baseURITest() {
         given()
                 .param("page", 3)
                 .pathParam("APIName", "users")
@@ -283,4 +295,143 @@ public class ZippoAPITest {
     }
 
     @Test
+    void requestAndResponseSpecTest() {
+
+        given()
+                .spec(requestSpecification)
+                .when()
+                .get("/{APIName}")
+                .then()
+                .spec(responseSpecification)
+                .body("meta.pagination.page", equalTo(3));
+    }
+
+    @Test
+    void extractStringTest() {
+
+        String placeName = given()
+                .pathParam("countryCode", "us")
+                .pathParam("zipCode", "90210")
+                .when()
+                .get("http://api.zippopotam.us/{countryCode}/{zipCode}")
+                .then()
+                .log().body()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .extract().path("places[0].'place name'");
+        // with extract method our request returns a value(not Objects)
+        // extract returns only one part of the response(the part that we specify in path method)
+        // we can assign it to a variable and use it however we want
+
+        System.out.println("placeName = " + placeName);
+    }
+
+    @Test
+    void extractIntValue() {
+        int page = given()
+                .spec(requestSpecification)
+                .when()
+                .get("/{APIName}")
+                .then()
+                .spec(responseSpecification)
+                .body("meta.pagination.page", equalTo(3))
+                .extract().path("meta.pagination.page");
+        // We are not allowed to assign an int to a String(cannot assign a type to another type)
+
+        System.out.println("page = " + page);
+    }
+
+    @Test
+    void extractListTest1() {
+
+        List<Integer> listOfIds = given()
+                .spec(requestSpecification)
+                .when()
+                .get("/{APIName}")
+                .then()
+                .spec(responseSpecification)
+                .body("data.id", hasSize(10))
+                .extract().path("data.id");
+
+        System.out.println("listOfIds.size() = " + listOfIds.size());
+        System.out.println("listOfIds.get(3) = " + listOfIds.get(3));
+        System.out.println("listOfIds.contains(5507746) = " + listOfIds.contains(5507746));
+
+        Assert.assertTrue(listOfIds.contains(5507746));
+    }
+
+    // Send a request to https://gorest.co.in/public/v1/users?page=3
+    // and extract name values from data
+
+    @Test
+    void extractListTest2() {
+        List<String> listOfNames = given()
+                .spec(requestSpecification)
+                .when()
+                .get("/{APIName}")
+                .then()
+                .spec(responseSpecification)
+                .body("data.name", hasSize(10))
+                .extract().path("data.name");
+
+        for (String name : listOfNames) {
+            System.out.println("name = " + name);
+        }
+    }
+
+    @Test
+    void extractResponse() {
+        Response response = given()
+                .spec(requestSpecification)
+                .when()
+                .get("/{APIName}")
+                .then()
+                .spec(responseSpecification)
+                .extract().response();
+        // returns the entire response and assigns it to a Response object.
+        // By using this object we are able to reach any part of the response
+
+        // extract.path           vs                 extract.response
+        // extract.path() can only give us one part of the response. If you need different values from different parts of the response (names and page)
+        // you need to write two different request.
+        // extract.response() gives us the entire response as an object so if you need different values from different parts of the response (names and page)
+        // you can get them with only one request
+
+        int page = response.path("meta.pagination.page");
+        System.out.println("page = " + page);
+
+        String nextUrl = response.path("meta.pagination.links.next");
+        System.out.println("nextUrl = " + nextUrl);
+
+        String name = response.path("data[1].name");
+        System.out.println("name = " + name);
+
+        List<String> nameList = response.path("data.name");
+        System.out.println("nameList = " + nameList);
+    }
+
+    // POJO (Plain Old Java Object)
+
+    @Test
+    void extractJsonPOJO(){
+
+       Location location = given()
+                .pathParam("countryCode", "us")
+                .pathParam("zipCode", "90210")
+                .when()
+                .get("http://api.zippopotam.us/{countryCode}/{zipCode}")
+                .then()
+                .log().body()
+                .extract().as(Location.class);
+
+        // This request extracts the entire response and assigns it to Location class as a Location object
+        // We cannot extract the body partially (e.g. cannot extract place object separately)
+
+        System.out.println("location.getPostCode() = " + location.getPostCode());
+        System.out.println("location.getCountry() = " + location.getCountry());
+        System.out.println("location.getCountryAbbreviation() = " + location.getCountryAbbreviation());
+        System.out.println("location.getPlaces().get(0) = " + location.getPlaces().get(0));
+        System.out.println("location.getPlaces().get(0).getPlaceName() = " + location.getPlaces().get(0).getPlaceName());
+        System.out.println("location.getPlaces().get(0).getState() = " + location.getPlaces().get(0).getState());
+    }
 }
