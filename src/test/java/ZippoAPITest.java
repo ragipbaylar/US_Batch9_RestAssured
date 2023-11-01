@@ -1,4 +1,5 @@
 import POJOClasses.Location;
+import POJOClasses.User;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.builder.ResponseSpecBuilder;
 import io.restassured.filter.log.LogDetail;
@@ -413,9 +414,9 @@ public class ZippoAPITest {
     // POJO (Plain Old Java Object)
 
     @Test
-    void extractJsonPOJO(){
+    void extractJsonPOJO() {
 
-       Location location = given()
+        Location location = given()
                 .pathParam("countryCode", "us")
                 .pathParam("zipCode", "90210")
                 .when()
@@ -433,5 +434,72 @@ public class ZippoAPITest {
         System.out.println("location.getPlaces().get(0) = " + location.getPlaces().get(0));
         System.out.println("location.getPlaces().get(0).getPlaceName() = " + location.getPlaces().get(0).getPlaceName());
         System.out.println("location.getPlaces().get(0).getState() = " + location.getPlaces().get(0).getState());
+    }
+
+    @Test
+    void extractWithJsonPath1() {
+
+        User user = given()
+                .spec(requestSpecification)
+                .when()
+                .get("/{APIName}")
+                .then()
+                .spec(responseSpecification)
+                .extract().jsonPath().getObject("data[0]", User.class);
+
+        System.out.println("user.getId() = " + user.getId());
+        System.out.println("user.getName() = " + user.getName());
+        System.out.println("user.getEmail() = " + user.getEmail());
+    }
+
+    // extract.path() ==> we can extract only one value or list of that values
+    //                 String name = extract.path(data[0].name)
+    //                 List<String> nameList extract.path(data.name)
+    //
+    // extract.as() ==> We can extract the entire response body. It doesn't let us to extract one part of the body separately.
+    //                  So we need to create classes for the entire body.
+    //                  extract.as(Location.class)
+    //                  extract.as(Place.class) cannot extract like this
+    //                  extract.as(User.class) cannot extract like this
+    //
+    // extract.jsonPath() ==> We can extract the entire body as well as any part of the body. So if we need only one part of the
+    //                        body we don't need to create classes for the entire body
+    //                        extract.jsonPath().getObject(Location.class)
+    //                        extract.jsonPath().getObject(Place.class)
+    //                        extract.jsonPath().getObject(User.class)
+
+    @Test
+    void extractWithJsonPath2() {
+
+        List<User> usersList = given()
+                .spec(requestSpecification)
+                .when()
+                .get("/{APIName}")
+                .then()
+                .spec(responseSpecification)
+                .extract().jsonPath().getList("data", User.class);
+
+        System.out.println("usersList.size() = " + usersList.size());
+        System.out.println("usersList.get(0).getName() = " + usersList.get(0).getName());
+        System.out.println("usersList.get(5).getId() = " + usersList.get(5).getId());
+    }
+
+    @Test
+    void extractWithJsonPath3() {
+
+        Response response = given()
+                .spec(requestSpecification)
+                .when()
+                .get("/{APIName}")
+                .then()
+                .spec(responseSpecification)
+                .extract().response();
+
+        System.out.println("response.jsonPath().getInt(\"meta.pagination.page\") = " + response.jsonPath().getInt("meta.pagination.page"));
+        System.out.println("response.jsonPath().getString(\"data[2].name\") = " + response.jsonPath().getString("data[2].name"));
+        
+        List<User> userList = response.jsonPath().getList("data", User.class);
+        System.out.println("userList.size() = " + userList.size());
+        System.out.println("userList.get(6).getName() = " + userList.get(6).getName());
     }
 }

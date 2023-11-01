@@ -3,9 +3,11 @@ import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.builder.ResponseSpecBuilder;
 import io.restassured.filter.log.LogDetail;
 import io.restassured.http.ContentType;
+import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 import io.restassured.specification.ResponseSpecification;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
@@ -17,12 +19,12 @@ import static org.hamcrest.Matchers.*;
 
 public class GoRestUsersTest {
 
-    public String randomName(){
+    public String randomName() {
         return RandomStringUtils.randomAlphabetic(10);
     }
 
-    public String randomEmail(){
-        return RandomStringUtils.randomAlphabetic(6)+"@techno.com";
+    public String randomEmail() {
+        return RandomStringUtils.randomAlphabetic(6) + "@techno.com";
     }
 
     RequestSpecification requestSpecification;
@@ -59,7 +61,7 @@ public class GoRestUsersTest {
     void createNewUser() {
         given()
                 .spec(requestSpecification)
-                .body("{\"name\":\""+randomName()+"\",\"email\":\""+randomEmail()+"\",\"gender\":\"male\",\"status\":\"active\"}")
+                .body("{\"name\":\"" + randomName() + "\",\"email\":\"" + randomEmail() + "\",\"gender\":\"male\",\"status\":\"active\"}")
                 .when()
                 .post()
                 .then()
@@ -68,11 +70,11 @@ public class GoRestUsersTest {
     }
 
     @Test
-    void createNewUserWithMaps(){
+    void createNewUserWithMaps() {
         Map<String, String> newUser = new HashMap<>();
-        newUser.put("name",randomName());
+        newUser.put("name", randomName());
         newUser.put("email", randomEmail());
-        newUser.put("gender","female");
+        newUser.put("gender", "female");
         newUser.put("status", "active");
 
         given()
@@ -83,13 +85,14 @@ public class GoRestUsersTest {
                 .then()
                 .statusCode(201)
                 .spec(responseSpecification)
-                .body("email",equalTo(newUser.get("email")));
+                .body("email", equalTo(newUser.get("email")));
     }
 
     User newUser;
     User userFromResponse;
+
     @Test
-    void createNewUserWithObject(){
+    void createNewUserWithObject() {
 //        User newUser = new User(randomName(),randomEmail(),"male", "active");
 
         newUser = new User();
@@ -98,7 +101,7 @@ public class GoRestUsersTest {
         newUser.setGender("male");
         newUser.setStatus("active");
 
-       userFromResponse = given()
+        userFromResponse = given()
                 .spec(requestSpecification)
                 .body(newUser)
                 .when()
@@ -106,13 +109,15 @@ public class GoRestUsersTest {
                 .then()
                 .statusCode(201)
                 .spec(responseSpecification)
-                .body("email",equalTo(newUser.getEmail()))
+                .body("email", equalTo(newUser.getEmail()))
                 .extract().as(User.class);
     }
 
-    /** Write create user negative test**/
+    /**
+     * Write create user negative test
+     **/
     @Test(dependsOnMethods = "createNewUserWithObject")
-    void createUserNegativeTest(){
+    void createUserNegativeTest() {
         newUser.setName(randomName());
         newUser.setGender("female");
 
@@ -124,23 +129,88 @@ public class GoRestUsersTest {
                 .then()
                 .statusCode(422)
                 .spec(responseSpecification)
-                .body("[0].message",equalTo("has already been taken"));
+                .body("[0].message", equalTo("has already been taken"));
     }
 
     /**
-     * get the user you created in createAUserWithObject test
+     * get the user you created in createNewUserWithObject test
      **/
 
     @Test(dependsOnMethods = "createNewUserWithObject")
-    void getUserById(){
+    void getUserById() {
         given()
                 .spec(requestSpecification)
-                .pathParam("userId",userFromResponse.getId())
+                .pathParam("userId", userFromResponse.getId())
                 .when()
                 .get("/{userId}")
                 .then()
                 .spec(responseSpecification)
                 .statusCode(200)
-                .body("email",equalTo(newUser.getEmail()));
+                .body("email", equalTo(newUser.getEmail()));
+    }
+
+    /**
+     * Update the user you created in createNewUserWithObject
+     **/
+
+    @Test(dependsOnMethods = "createNewUserWithObject")
+    void updateUser() {
+        userFromResponse.setName(randomName());
+        userFromResponse.setEmail(randomEmail());
+
+        given()
+                .spec(requestSpecification)
+                .body(userFromResponse)
+                .pathParam("userId", userFromResponse.getId())
+                .when()
+                .put("/{userId}")
+                .then()
+                .spec(responseSpecification)
+                .statusCode(200)
+                .body("name",equalTo(userFromResponse.getName()))
+                .body("email",equalTo(userFromResponse.getEmail()));
+    }
+
+    /**
+     * Delete the user you created in createNewUserWithObject
+     **/
+
+    @Test(dependsOnMethods = "createNewUserWithObject")
+    void deleteUser(){
+
+        given()
+                .spec(requestSpecification)
+                .pathParam("userId",userFromResponse.getId())
+                .when()
+                .delete("/{userId}")
+                .then()
+                .statusCode(204);
+    }
+
+    /**
+     * create delete user negative test
+     **/
+
+    @Test(dependsOnMethods = {"createNewUserWithObject", "deleteUser"})
+    void deleteUserNegativeTest(){
+
+        given()
+                .spec(requestSpecification)
+                .pathParam("userId",userFromResponse.getId())
+                .when()
+                .delete("/{userId}")
+                .then()
+                .statusCode(404);
+    }
+
+    @Test(dependsOnMethods = {"createNewUserWithObject", "deleteUser"})
+    void getUserByIdNegativeAfterDelete() {
+        given()
+                .spec(requestSpecification)
+                .pathParam("userId", userFromResponse.getId())
+                .when()
+                .get("/{userId}")
+                .then()
+                .statusCode(404);
     }
 }
