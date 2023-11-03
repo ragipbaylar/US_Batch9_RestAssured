@@ -45,7 +45,7 @@ public class GoRestUsersTest {
                 .build();
     }
 
-    @Test
+    @Test(priority = 1)
     void getUsersList() {
         given()
                 .spec(requestSpecification)
@@ -57,7 +57,7 @@ public class GoRestUsersTest {
                 .spec(responseSpecification);
     }
 
-    @Test
+    @Test(priority = 2)
     void createNewUser() {
         given()
                 .spec(requestSpecification)
@@ -69,7 +69,7 @@ public class GoRestUsersTest {
                 .spec(responseSpecification);
     }
 
-    @Test
+    @Test(priority = 3)
     void createNewUserWithMaps() {
         Map<String, String> newUser = new HashMap<>();
         newUser.put("name", randomName());
@@ -91,7 +91,7 @@ public class GoRestUsersTest {
     User newUser;
     User userFromResponse;
 
-    @Test
+    @Test(priority = 4)
     void createNewUserWithObject() {
 //        User newUser = new User(randomName(),randomEmail(),"male", "active");
 
@@ -116,7 +116,7 @@ public class GoRestUsersTest {
     /**
      * Write create user negative test
      **/
-    @Test(dependsOnMethods = "createNewUserWithObject")
+    @Test(dependsOnMethods = "createNewUserWithObject", priority = 5)
     void createUserNegativeTest() {
         newUser.setName(randomName());
         newUser.setGender("female");
@@ -136,7 +136,7 @@ public class GoRestUsersTest {
      * get the user you created in createNewUserWithObject test
      **/
 
-    @Test(dependsOnMethods = "createNewUserWithObject")
+    @Test(dependsOnMethods = "createNewUserWithObject", priority = 6)
     void getUserById() {
         given()
                 .spec(requestSpecification)
@@ -153,7 +153,7 @@ public class GoRestUsersTest {
      * Update the user you created in createNewUserWithObject
      **/
 
-    @Test(dependsOnMethods = "createNewUserWithObject")
+    @Test(dependsOnMethods = "createNewUserWithObject", priority = 7)
     void updateUser() {
         userFromResponse.setName(randomName());
         userFromResponse.setEmail(randomEmail());
@@ -175,7 +175,7 @@ public class GoRestUsersTest {
      * Delete the user you created in createNewUserWithObject
      **/
 
-    @Test(dependsOnMethods = "createNewUserWithObject")
+    @Test(dependsOnMethods = "createNewUserWithObject", priority = 8)
     void deleteUser(){
 
         given()
@@ -191,7 +191,7 @@ public class GoRestUsersTest {
      * create delete user negative test
      **/
 
-    @Test(dependsOnMethods = {"createNewUserWithObject", "deleteUser"})
+    @Test(dependsOnMethods = {"createNewUserWithObject", "deleteUser"}, priority = 9)
     void deleteUserNegativeTest(){
 
         given()
@@ -203,7 +203,7 @@ public class GoRestUsersTest {
                 .statusCode(404);
     }
 
-    @Test(dependsOnMethods = {"createNewUserWithObject", "deleteUser"})
+    @Test(dependsOnMethods = {"createNewUserWithObject", "deleteUser"}, priority = 10)
     void getUserByIdNegativeAfterDelete() {
         given()
                 .spec(requestSpecification)
