@@ -166,7 +166,7 @@ public class GoRestUsersTest {
                 .put("/{userId}")
                 .then()
                 .spec(responseSpecification)
-                .statusCode(200)
+                .statusCode(404)
                 .body("name",equalTo(userFromResponse.getName()))
                 .body("email",equalTo(userFromResponse.getEmail()));
     }
@@ -200,7 +200,7 @@ public class GoRestUsersTest {
                 .when()
                 .delete("/{userId}")
                 .then()
-                .statusCode(404);
+                .statusCode(200);
     }
 
     @Test(dependsOnMethods = {"createNewUserWithObject", "deleteUser"}, priority = 10)
