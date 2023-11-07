@@ -48,7 +48,7 @@
                 <version>3.2.1</version>
                 <configuration>
                     <suiteXmlFiles>
-                        <suiteXmlFile>GoRestUsersAPITest.xml</suiteXmlFile>
+                        <suiteXmlFile>src/test/java/XMLFiles/GoRestUsersAPITest.xml</suiteXmlFile>
                     </suiteXmlFiles>
                 </configuration>
             </plugin>
